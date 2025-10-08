@@ -26,6 +26,7 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
     fighter_name_map = {f.id: f.name for f in all_fighters}
     fighter_dob_map = {f.id: safe_to_datetime(f.dob, '%b %d, %Y') for f in all_fighters}
 
+    quality_scores = {}
     ranking_data = []
     today = datetime.date.today()
 
@@ -49,9 +50,11 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
         opponent_elos = []
         for _, fight in recent_fights.iterrows():
             if fight['red_fighter_id'] == fighter_id:
-                opponent_elos.append(fight['blue_elo'])
+                opponent_elos.append(fight['blue_fighter_elo_after'])
             else:
-                opponent_elos.append(fight['red_elo'])
+                opponent_elos.append(fight['red_fighter_elo_after'])
+
+        print(opponent_elos)
 
         avg_opponent_rating = np.mean(opponent_elos)
         sos_bonus = (avg_opponent_rating - 1500) * WEIGHT_SOS
@@ -60,6 +63,7 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
         age_penalty = -((age - 30) ** 2) * WEIGHT_AGE if age > 30 or age < 24 else 0
 
         advanced_quality_score = skill_component + activity_penalty + sos_bonus + age_penalty
+        quality_scores[fighter_id] = advanced_quality_score
 
         ranking_data.append({
             'id': fighter_id,
@@ -75,4 +79,4 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
     final_rankings = rankings_df.sort_values(by='Quality Score', ascending=False)
 
     final_rankings.insert(0, '#', range(1, 1 + len(final_rankings)))
-    return final_rankings
+    return final_rankings, quality_scores
