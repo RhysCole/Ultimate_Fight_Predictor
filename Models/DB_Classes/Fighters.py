@@ -18,23 +18,7 @@ class Fighter:
         self.elo_rating: float = fighter_data.get("elo_rating", 1500.0)
         self.rating_deviation: float = fighter_data.get("rating_deviation", 350.0)
         self.rating_volatility: float = fighter_data.get("rating_volatility", 0.06)
-
-    def to_tuple_for_insert(self) -> tuple:
-
-        return (
-            self.name,
-            self.nickname,
-            self.height,
-            self.weight,
-            self.reach,
-            self.stance,
-            self.record,
-            self.dob,
-            self.profile_url,
-            self.elo_rating,
-            self.rating_deviation,
-            self.rating_volatility
-        )
+        self.quality_score: float = fighter_data.get("quality_score", 1500)
 
     def __repr__(self) -> str:
         """Provides a developer-friendly string representation of the object."""

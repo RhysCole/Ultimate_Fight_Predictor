@@ -1,4 +1,4 @@
-from Models.Fight import Fight
+from Models.DB_Classes.Fight import Fight
 import datetime
 from bs4 import BeautifulSoup
 import requests

@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
+import joblib
 
-from Models.Functional_Classes.My_OneHotEncoder import MyOneHotEncoder
+from config.config import DOMINANCE_ENCODER_PATH
 
 def create_features(df: pd.DataFrame) -> pd.DataFrame:
-    encoder = MyOneHotEncoder()
-
     winner_is_red = df['winner_id'] == df['red_fighter_id']
     features = pd.DataFrame(index=df.index)
 
@@ -48,10 +47,8 @@ def prep_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df['win_method_clean'] = df['win_method'].str.split('\n').str[0]
 
-    encoder = MyOneHotEncoder()
-    encoder.fit(df['win_method_clean'])
+    encoder = joblib.load(DOMINANCE_ENCODER_PATH)
     encoded_df = encoder.transform(df['win_method_clean'])
-
     final_features = pd.concat([features, encoded_df], axis=1)
     return final_features
 

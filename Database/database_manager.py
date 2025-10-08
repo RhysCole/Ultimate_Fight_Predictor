@@ -1,8 +1,9 @@
 import sqlite3
-from typing import Optional, List, Any
+import pandas as pd
+from typing import Optional, List
 
-from Models.Fighters import Fighter
-from Models.Fight import Fight
+from Models.DB_Classes.Fighters import Fighter
+from Models.DB_Classes.Fight import Fight
  
 class DatabaseManager:
     def __init__(self, db_path: str):
@@ -91,7 +92,57 @@ class DatabaseManager:
                 """, data_to_insert)
         
         print(f"Finished inserting fights. Processed {self.cursor.rowcount} new rows.")
-    
+        
+        
+    def bulk_insert_upcoming_fights(self, upcoming_fights: List[dict]):
+        if not upcoming_fights:
+            print("No upcoming fights to insert.")
+            return
+        
+        data_to_insert = []
+        for fight in upcoming_fights:
+            red_name = fight.get('red_fighter_name')
+            blue_name = fight.get('blue_fighter_name')
+            event_date = fight.get('event_date')
+            
+            print("red_name", red_name)
+            print("blue_name", blue_name)
+            print("event_date", event_date)
+
+            if not all([red_name, blue_name, event_date]):
+                print(f"Skipping fight due to missing data: {fight}")
+                continue
+            
+            red_id = self.get_fighter_id_by_name(red_name)
+            blue_id = self.get_fighter_id_by_name(blue_name)
+
+            if not red_id or not blue_id:
+                print(f"Skipping fight: Could not find DB entry for {red_name} or {blue_name}")
+                continue
+            
+            fight_key = f"{event_date}-{red_id}-{blue_id}"
+            
+            data_to_insert.append((
+                event_date,
+                red_id,
+                blue_id,
+                red_name,
+                blue_name,
+            ))
+
+        if not data_to_insert:
+            print("No valid fights to insert after processing.")
+            return
+            
+        self.cursor.executemany("""
+            INSERT OR IGNORE INTO upcoming (
+                event_date,
+                red_fighter_id,
+                blue_fighter_id,
+                red_fighter_name,
+                blue_fighter_name
+            ) VALUES ( ?, ?, ?, ?, ?)
+        """, data_to_insert)    
 
     def get_fighters(self, names: Optional[list[str]] = None) -> list[Fighter]:
         if names:
@@ -122,7 +173,7 @@ class DatabaseManager:
             query = f"""
                 SELECT * FROM fights
                 WHERE red_fighter_id IN (SELECT id FROM fighters WHERE Name IN ({placeholders}))
-                   OR blue_fighter_id IN (SELECT id FROM fighters WHERE Name IN ({placeholders}))
+                OR blue_fighter_id IN (SELECT id FROM fighters WHERE Name IN ({placeholders}))
             """
             self.cursor.execute(query, fighter_names * 2)
         else:
@@ -139,13 +190,42 @@ class DatabaseManager:
             fights.append(fight_data)
 
         return fights
+    
+    def get_upcoming_fight_by_id(self, fight_id: int) -> dict | None:
 
-    def update_all_fighters(self, glicko_players: dict):
+        query = """
+            SELECT
+                id,
+                event_date,
+                red_fighter_id,
+                blue_fighter_id,
+                red_fighter_name,
+                blue_fighter_name
+            FROM upcoming
+            WHERE id = ?;
+        """
+        self.cursor.execute(query, (fight_id,))
+        row = self.cursor.fetchone()
+        return dict(row) if row else None
+    
+    def get_upcoming_fights(self) -> dict | None:
+
+        query = """
+            SELECT
+                *
+            FROM upcoming;
+        """
+        self.cursor.execute(query)
+        rows = self.cursor.fetchall()
+        return [dict(row) for row in rows]
+
+    def update_all_fighters(self, glicko_players: dict, quality_score: dict):
         update_data = [
             (
                 player.rating,
                 player.rating_deviation,
                 player.volatility,
+                quality_score.get(fighter_id, 0.0),
                 fighter_id
             )
             for fighter_id, player in glicko_players.items()
@@ -155,9 +235,11 @@ class DatabaseManager:
             UPDATE fighters 
             SET elo_rating = ?, 
                 rating_deviation = ?, 
-                rating_volatility = ?
+                rating_volatility = ?,
+                quality_score = ?
             WHERE id = ?
         """, update_data)
+        
 
     def reset_fighter_ratings(self):
         default_rating = 1500.0
@@ -170,3 +252,121 @@ class DatabaseManager:
                 rating_deviation  = ?,
                 rating_volatility = ?
             """, (default_rating, default_rd, default_volatility))
+
+    def save_fight_elos(self, fight_snapshots: list):
+        self.cursor.executemany("""
+            UPDATE fights
+            SET 
+                red_fighter_elo_before = ?,
+                red_fighter_elo_after = ?,
+                blue_fighter_elo_before = ?,
+                blue_fighter_elo_after = ?
+            WHERE fight_id = ?
+        """, fight_snapshots)
+
+    def get_fighter_history(self, fighter_ids: list[int], date: str):
+        placeholders = ",".join("?" * len(fighter_ids))
+
+        query = f"""
+            SELECT * FROM fights
+                WHERE red_fighter_id IN ({placeholders}) OR blue_fighter_id IN ({placeholders})
+                AND event_date < ? 
+            ORDER BY event_date ASC
+        """
+
+        params = fighter_ids + fighter_ids + [date]
+
+        df = pd.read_sql(query, self.conn , params = params)
+
+        return df
+
+    def get_fighter_by_id(self, fighter_id: int):
+        query = f"""
+            SELECT * FROM fighters WHERE id = ?
+        """
+
+        params = (fighter_id, )
+
+        df = pd.read_sql(query, self.conn, params = params)
+
+        fighter_data_dict = df.iloc[0].to_dict()
+
+        return Fighter(fighter_data_dict)
+
+    def get_fighter_ids(self):
+        query = f"""
+            SELECT id FROM fighters
+        """
+
+        df = pd.read_sql(query, self.conn)
+
+        return df
+
+    def update_fighter_styles(self, fighter_styles: list[dict]):
+        if not fighter_styles:
+            print("No styles to update.")
+            return
+
+        print(f"Updating style archetypes for {len(fighter_styles)} fighters...")
+
+        update_data = [
+            (
+                style['primary_style'],
+                style['secondary_style'],
+                style['tertiary_attributes'],
+                style['fighter_id']
+            ) for style in fighter_styles
+        ]
+
+        self.cursor.executemany("""
+                                UPDATE fighters
+                                SET primary_style       = ?,
+                                    secondary_style     = ?,
+                                    tertiary_attributes = ?
+                                WHERE id = ?
+                                """, update_data)
+
+        print(f"-> Successfully updated styles for {self.cursor.rowcount} records.")
+
+    def get_fighter_styles(self, fighter_ids: list[int]) -> dict:
+        if not fighter_ids:
+            return {}
+
+        placeholders = ",".join("?" * len(fighter_ids))
+        query = f"""
+            SELECT id, primary_style, secondary_style, tertiary_attributes 
+            FROM fighters 
+            WHERE id IN ({placeholders})
+        """
+
+        self.cursor.execute(query, fighter_ids)
+        rows = self.cursor.fetchall()
+
+        styles_map = {
+            row['id']: {
+                'primary_style': row['primary_style'],
+                'secondary_style': row['secondary_style'],
+                'tertiary_attributes': row['tertiary_attributes']
+            }
+            for row in rows
+        }
+
+        return styles_map
+
+
+    def get_fighter_id_by_name(self, fighter_name: str) -> Optional[int]:
+        self.cursor.execute("SELECT id FROM fighters WHERE Name = ?", (fighter_name,))
+        result = self.cursor.fetchone()
+        return result['id'] if result else None
+    
+    
+    def get_fight_by_id(self, fight_id):
+        query = f"""
+            SELECT * FROM fights WHERE red_fighter_id = {fight_id} OR blue_fighter_id = {fight_id}
+        """
+
+        self.cursor.execute(query)
+        rows = self.cursor.fetchone()
+
+        return dict(rows)
+

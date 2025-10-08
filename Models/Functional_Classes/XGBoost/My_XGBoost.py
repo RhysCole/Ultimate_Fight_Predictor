@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from Models.Functional_Classes.TreeNode import TreeNode
+from Models.Functional_Classes.globals.TreeNode import TreeNode
 
 class My_XGBoost_Regressor():
     def __init__(self, n_estimators=100, max_depth=3, learning_rate=0.1, gamma = 0.1, reg_lambda = 0.1, min_sample_split = 2):
@@ -136,4 +136,4 @@ class My_XGBoost_Regressor():
             predictions[i] = node.value
 
         return predictions
-    
+

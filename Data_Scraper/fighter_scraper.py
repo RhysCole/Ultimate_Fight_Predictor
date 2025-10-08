@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from Models.Fighters import Fighter 
+from Models.DB_Classes.Fighters import Fighter
 import string
 import concurrent.futures
 import time

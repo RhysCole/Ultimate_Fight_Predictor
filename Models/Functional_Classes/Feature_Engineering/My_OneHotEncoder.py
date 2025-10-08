@@ -15,8 +15,14 @@ class MyOneHotEncoder():
         self.feature_names_ = [f"{X.name}_{category}" for category in unique_categories]
 
         return self
-    
-    def transform(self, X: pd.Series):
+
+
+    def get_feature_names_out(self, prefix: str) -> list:
+        categories = sorted(self.category_map_, key=self.category_map_.get)
+        return [f"{prefix}_{category}" for category in categories]
+
+
+    def transform(self, X: pd.Series, prefix = None):
 
         if self.category_map_ is None:
             raise RuntimeError("Encoder has not been fitted yet. Call .fit() first.")
@@ -30,8 +36,14 @@ class MyOneHotEncoder():
             
             if category_index is not None:
                 transformed_features[i, category_index] = 1
-                
-        return pd.DataFrame(transformed_features, columns=self.feature_names_, index=X.index)
+
+        if prefix is None:
+            col_name = self.feature_names_
+        elif prefix is not None:
+            col_name = self.get_feature_names_out(prefix)
+
+
+        return pd.DataFrame(transformed_features, columns=col_name, index=X.index)
     
     def fit_transform(self, X: pd.Series):
         return self.fit(X).transform(X)
