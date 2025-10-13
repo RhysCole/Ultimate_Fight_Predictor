@@ -18,7 +18,9 @@ def get_upcoming_fights_route():
         
         if not upcoming_fights:
             return [] 
-            
+        
+        
+        
         return upcoming_fights
     except Exception as e:
         raise HTTPException(
