@@ -1,3 +1,5 @@
+from difflib import context_diff
+from multiprocessing import context
 from matplotlib import style
 import pandas as pd
 import numpy as np
@@ -51,11 +53,6 @@ class Fight_Context:
         self.red_finish_score = None
         self.blue_finish_score = None
         self.finish_diff = None
-        
-        red_defence_score = None
-        blue_defence_score = None
-        strikes_per_min_diff = None
-        takedowns_per_min_diff = None
 
     def get_past_fights(self):
         with DatabaseManager(DB_PATH) as db:
@@ -320,3 +317,30 @@ class Fight_Context:
             X['target'] = 1 if self.winner_id == self.red_fighter.id else 0
             
         return X
+    
+    def create_readable_features(self):
+        self.fit()
+        
+        fighters_features = create_fight_features(self.red_fighter, self.blue_fighter, self.event_date, readable=True)
+        
+        features = {
+            "red_fighter_elo": self.red_fighter.elo_rating,
+            "blue_fighter_elo": self.blue_fighter.elo_rating,
+            "red_fighter_quality_score": self.red_fighter.quality_score,
+            "blue_fighter_quality_score": self.blue_fighter.quality_score,
+            "style_diff": self.style_diff,
+            "red_finish_score": self.red_finish_score,
+            "blue_finish_score": self.blue_finish_score,      
+        }
+        
+        feature_df = pd.DataFrame(features, index=[0])
+        
+        X = pd.concat([
+            fighters_features.reset_index(drop = True),
+            feature_df.reset_index(drop=True)
+        ], axis=1)
+        
+        return X 
+
+           
+

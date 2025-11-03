@@ -21,6 +21,20 @@ class DatabaseManager:
         if self.conn:
             self.conn.commit()
             self.conn.close()
+            
+    def format_web_query(self, query):
+        self.cursor.execute(query)
+        rows = self.cursor.fetchall()
+        
+        despription = self.cursor.description
+        column_names = [desc[0] for desc in despription]
+        
+        full_list = []
+        for row in rows:
+            dictionary = dict(zip(column_names, row))
+            full_list.append(dictionary)
+                    
+        return full_list
 
     def clear_tables(self, tables: list[str]):
         if not tables:
@@ -190,34 +204,6 @@ class DatabaseManager:
             fights.append(fight_data)
 
         return fights
-    
-    def get_upcoming_fight_by_id(self, fight_id: int) -> dict | None:
-
-        query = """
-            SELECT
-                id,
-                event_date,
-                red_fighter_id,
-                blue_fighter_id,
-                red_fighter_name,
-                blue_fighter_name
-            FROM upcoming
-            WHERE id = ?;
-        """
-        self.cursor.execute(query, (fight_id,))
-        row = self.cursor.fetchone()
-        return dict(row) if row else None
-    
-    def get_upcoming_fights(self) -> dict | None:
-
-        query = """
-            SELECT
-                *
-            FROM upcoming;
-        """
-        self.cursor.execute(query)
-        rows = self.cursor.fetchall()
-        return [dict(row) for row in rows]
 
     def update_all_fighters(self, glicko_players: dict, quality_score: dict):
         update_data = [
@@ -354,19 +340,87 @@ class DatabaseManager:
         return styles_map
 
 
+
+
+
+
+
+
+                ########        THESE ARE NOW API QUERIES       ########
+
+
+
+
+
+
+
+
+
     def get_fighter_id_by_name(self, fighter_name: str) -> Optional[int]:
         self.cursor.execute("SELECT id FROM fighters WHERE Name = ?", (fighter_name,))
         result = self.cursor.fetchone()
         return result['id'] if result else None
     
     
+    def get_fight_by_fighter_id(self, fighter_id):
+        query = f"""
+            SELECT * FROM fights WHERE red_fighter_id = {fighter_id} OR blue_fighter_id = {fighter_id}
+        """
+        return self.format_web_query(query)
+    
+    def get_upcoming_by_fighter_id(self, fighter_id):
+        query = f"""
+            SELECT * FROM upcoming WHERE red_fighter_id = {fighter_id} OR blue_fighter_id = {fighter_id}
+        """
+        return self.format_web_query(query)
+
     def get_fight_by_id(self, fight_id):
         query = f"""
-            SELECT * FROM fights WHERE red_fighter_id = {fight_id} OR blue_fighter_id = {fight_id}
+            SELECT * FROM fights WHERE fight_id = {fight_id}
         """
+        return self.format_web_query(query)
+    
+    
+    def get_upcoming_by_id(self, fight_id):
+        query = f"""
+            SELECT * FROM upcoming WHERE id = {fight_id}
+        """
+        return self.format_web_query(query)
+    
+    def get_recent_fights(self, count):
+        query = f"""
+            SELECT * FROM fights ORDER BY event_date DESC LIMIT {count}
+        """
+        return self.format_web_query(query)
 
-        self.cursor.execute(query)
-        rows = self.cursor.fetchone()
-
-        return dict(rows)
-
+    def get_all_fighters(self):
+        query = f"""
+            SELECT id, Name, Record FROM fighters
+        """
+        return self.format_web_query(query)
+    
+    
+    def get_fighter_upcomings(self, fighter_id):        
+        query = f"""SELECT * FROM upcoming WHERE red_fighter_id = {fighter_id} OR blue_fighter_id = {fighter_id}"""
+        return self.format_web_query(query)
+    
+    
+    def get_upcoming_fights(self) -> dict | None:
+        query = f"""
+            SELECT
+                u.id,
+                u.event_date,
+                u.red_fighter_id,
+                u.blue_fighter_id,
+                u.red_fighter_name,
+                u.blue_fighter_name,
+                rf.Record AS red_fighter_record,
+                bf.Record AS blue_fighter_record
+            FROM
+                upcoming u
+            JOIN
+                fighters rf ON u.red_fighter_id = rf.id
+            JOIN
+                fighters bf ON u.blue_fighter_id = bf.id
+        """
+        return self.format_web_query(query)

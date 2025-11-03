@@ -79,7 +79,7 @@ def calc_record_stats(red_fighter: Fighter, blue_fighter: Fighter):
 
 
 
-def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_date) -> pd.DataFrame:
+def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_date, readable = False) -> pd.DataFrame:
 
     fight_date = pd.to_datetime(event_date).date() if event_date else datetime.date.today()
 
@@ -101,7 +101,8 @@ def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_dat
 
     experiance_diff, win_prop_diff, loss_prop_diff = calc_record_stats(red_fighter, blue_fighter)
 
-    feature_dict = {
+    if readable == False: 
+        feature_dict = {
         "experiance_diff": experiance_diff,
         "win_proportion_diff": win_prop_diff,
         "loss_proportion_diff": loss_prop_diff,
@@ -109,7 +110,23 @@ def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_dat
         'reach_diff_cm': reach_diff,
         'age_diff': age_diff,
         'prime_score_diff': prime_score_diff,
-    }
+        }
+        
+    else:
+        feature_dict = {
+            "red_height": height_red_cm,
+            "blue_height": height_blue_cm,
+            "height_diff_cm": height_diff,
+            "red_reach": reach_red_cm,
+            "blue_reach": reach_blue_cm,
+            "reach_diff_cm": reach_diff,
+            "red_age": age_red,
+            "blue_age": age_blue,
+            "age_diff": age_diff,
+            "red_prime_score": prime_score_red,
+            "blue_prime_score": prime_score_blue,
+            "prime_score_diff": prime_score_diff
+        }
 
     return pd.DataFrame(feature_dict, index=[0]) 
 
