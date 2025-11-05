@@ -424,3 +424,57 @@ class DatabaseManager:
                 fighters bf ON u.blue_fighter_id = bf.id
         """
         return self.format_web_query(query)
+    
+        
+        self.cursor.execute(query, (user_id, fight_id, vote))    
+        
+    def get_vote_count(self, fight_id):
+        query = f"""
+            SELECT red_vote, blue_vote, draw_vote FROM user_votes WHERE id = ?
+        """
+        self.cursor.execute(query, (fight_id,))
+        return self.cursor.fetchone()[0]
+    
+    def update_upcoming_vote_totals(self):
+        """
+        Syncs the vote totals from 'upcoming_votes' back to the
+        'upcoming' table.
+        """
+        query = """
+            UPDATE upcoming
+            SET
+                red_vote = (
+                    SELECT COUNT(*)
+                    FROM upcoming_votes
+                    WHERE fight_id = upcoming.id AND vote = 0
+                ),
+                blue_vote = (
+                    SELECT COUNT(*)
+                    FROM upcoming_votes
+                    WHERE fight_id = upcoming.id AND vote = 1
+                ),
+                draw_vote = (
+                    SELECT COUNT(*)
+                    FROM upcoming_votes
+                    WHERE fight_id = upcoming.id AND vote = 2
+                )
+            WHERE
+                EXISTS (
+                    SELECT 1
+                    FROM upcoming_votes
+                    WHERE fight_id = upcoming.id
+                );
+        """
+        self.cursor.execute(query)
+        
+    def check_vote(self, user_id, fight_id):
+        query = f"""
+            SELECT * FROM upcoming_votes WHERE user_id = {user_id} AND fight_id = {fight_id}
+        """
+        return self.format_web_query(query)
+    
+    def vote(self, fight_id, user_id, vote):
+        query = f"""
+            INSERT INTO upcoming_votes (user_id, fight_id, vote) VALUES ({user_id}, {fight_id}, {vote})
+        """
+        self.cursor.execute(query)

@@ -82,4 +82,17 @@ def get_fight_by_fighter(fighter_id: int):
         "past": past_fights,
         "upcoming": upcoming_fights
     }
+@fights_router.post("/vote")
+def vote(fight_id: int, user_id: int, vote: int):
+    with DatabaseManager(DB_PATH) as db:
+        db.vote(fight_id, user_id, vote)
+        db.update_upcoming_vote_totals()
+        
+@fights_router.get("/vote_check")
+def vote_count(fight_id: int, user_id: int):
+    with DatabaseManager(DB_PATH) as db:
+        vote_data = db.check_vote(user_id, fight_id)
+        
+    return vote_data
+        
 
