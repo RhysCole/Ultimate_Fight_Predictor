@@ -94,5 +94,11 @@ def vote_count(fight_id: int, user_id: int):
         vote_data = db.check_vote(user_id, fight_id)
         
     return vote_data
+
+@fights_router.get("/history")
+def get_fight_history(fighter_id):
+    with DatabaseManager(DB_PATH) as db:
+        history = db.get_past_fights(fighter_id)
         
+    return history        
 

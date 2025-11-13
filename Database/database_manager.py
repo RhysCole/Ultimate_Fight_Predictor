@@ -478,3 +478,11 @@ class DatabaseManager:
             INSERT INTO upcoming_votes (user_id, fight_id, vote) VALUES ({user_id}, {fight_id}, {vote})
         """
         self.cursor.execute(query)
+        
+    def get_past_fights(self, fighter_id):            
+            query = f"""
+                SELECT * FROM fights
+                WHERE red_fighter_id = {fighter_id} OR blue_fighter_id = {fighter_id}
+                ORDER BY event_date ASC
+            """
+            return self.format_web_query(query)

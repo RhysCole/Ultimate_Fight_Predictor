@@ -89,6 +89,7 @@ class Fight_Context:
         blue_form = self.calc_form(self.blue_fighter.id)
 
         self.form_diff = red_form - blue_form
+                
 
     def calc_weighted_rivalry_dominance(self):
         rivalry_fights = self.fights[
@@ -328,6 +329,7 @@ class Fight_Context:
             "blue_fighter_elo": self.blue_fighter.elo_rating,
             "red_fighter_quality_score": self.red_fighter.quality_score,
             "blue_fighter_quality_score": self.blue_fighter.quality_score,
+            "rivalry_dominance": self.average_rivalry_dominance,
             "style_diff": self.style_diff,
             "red_finish_score": self.red_finish_score,
             "blue_finish_score": self.blue_finish_score,      
@@ -340,7 +342,5 @@ class Fight_Context:
             feature_df.reset_index(drop=True)
         ], axis=1)
         
-        return X 
-
-           
+        return X    
 
