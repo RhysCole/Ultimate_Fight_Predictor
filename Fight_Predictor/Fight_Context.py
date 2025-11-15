@@ -321,6 +321,7 @@ class Fight_Context:
     
     def create_readable_features(self):
         self.fit()
+        self.calc_style_performance()
         
         fighters_features = create_fight_features(self.red_fighter, self.blue_fighter, self.event_date, readable=True)
         
@@ -330,6 +331,8 @@ class Fight_Context:
             "red_fighter_quality_score": self.red_fighter.quality_score,
             "blue_fighter_quality_score": self.blue_fighter.quality_score,
             "rivalry_dominance": self.average_rivalry_dominance,
+            "red_style_score": self.red_style_performance,
+            "blue_style_score": self.blue_style_performance,
             "style_diff": self.style_diff,
             "red_finish_score": self.red_finish_score,
             "blue_finish_score": self.blue_finish_score,      

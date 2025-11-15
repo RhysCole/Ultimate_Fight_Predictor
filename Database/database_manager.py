@@ -422,6 +422,8 @@ class DatabaseManager:
                 fighters rf ON u.red_fighter_id = rf.id
             JOIN
                 fighters bf ON u.blue_fighter_id = bf.id
+            ORDER BY
+                u.event_date ASC
         """
         return self.format_web_query(query)
     
@@ -486,3 +488,27 @@ class DatabaseManager:
                 ORDER BY event_date ASC
             """
             return self.format_web_query(query)
+        
+    def get_fighter_rank(self, fighter_id: int) -> int | None:
+        query = """
+            WITH FighterRanks AS (
+                SELECT
+                    id,
+                    DENSE_RANK() OVER (ORDER BY quality_score DESC) as rank
+                FROM
+                    fighters
+            )
+            SELECT
+                rank
+            FROM
+                FighterRanks
+            WHERE
+                id = ?
+        """
+        self.cursor.execute(query, (fighter_id,))
+        result = self.cursor.fetchone()
+        
+        if result:
+            return result[0]  
+        
+        return None

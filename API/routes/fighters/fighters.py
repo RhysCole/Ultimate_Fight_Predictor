@@ -29,4 +29,11 @@ def get_fighter_info(fighter_id: int):
         "upcoming": upcoming_fights
     }
     
+@fighter_router.get('/rank')
+def get_fighter_rank(fighter_id: int):
+    with DatabaseManager(DB_PATH) as db:
+        rank = db.get_fighter_rank(fighter_id)
+        
+    return rank
+    
         
