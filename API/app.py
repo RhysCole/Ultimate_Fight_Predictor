@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from API.routes.users.users import auth_router
 from API.routes.fights.fights import fights_router
 from API.routes.fighters.fighters import fighter_router
+from API.routes.communities.communities import community_router
 
 app = FastAPI()
 
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(fights_router)
 app.include_router(fighter_router)
+app.include_router(community_router)
 
 @app.get("/")
 async def root():
