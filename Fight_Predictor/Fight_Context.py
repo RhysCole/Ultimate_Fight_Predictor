@@ -17,13 +17,14 @@ from utils.Fighter_Parser import create_fight_features
 
 
 class Fight_Context:
-    def __init__(self, red_fighter: Fighter, blue_fighter: Fighter, event_date: str, winner_id = None):
+    def __init__(self, red_fighter: Fighter, blue_fighter: Fighter, event_date: str, winner_id = None, training = False):
         fighters = [
             red_fighter,
             blue_fighter
         ]
 
-        random.shuffle(fighters)
+        if training:
+            random.shuffle(fighters)
         
         self.red_fighter = fighters[0]
         self.blue_fighter = fighters[1]
@@ -346,4 +347,9 @@ class Fight_Context:
         ], axis=1)
         
         return X    
+    
+    def get_rivalry_dominance(self):
+        self.set_activity()
+        return self.average_rivalry_dominance
+        
 

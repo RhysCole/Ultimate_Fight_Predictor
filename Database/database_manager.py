@@ -1,3 +1,4 @@
+from multiprocessing import allow_connection_pickling
 import sqlite3
 import pandas as pd
 from typing import Optional, List
@@ -512,3 +513,70 @@ class DatabaseManager:
             return result[0]  
         
         return None
+    
+    def get_top_fighters(self, count, option):
+            allowed_columns = ["elo_rating", "quality_score"]
+            print(option)
+            print(allowed_columns[option])
+            
+            query = f"""
+                SELECT Name, Record, elo_rating, quality_score
+                FROM fighters
+                ORDER BY {allowed_columns[option]} DESC
+                LIMIT ?
+            """
+            
+            self.cursor.execute(query, (count,))
+            return self.cursor.fetchall()
+              
+        
+    def get_active_rivalries(self) -> list[dict]:
+        query = """
+            SELECT 
+                f1.Name as red_fighter_name,
+                f2.Name as blue_fighter_name,
+                f1.id as red_fighter_id,
+                f2.id as blue_fighter_id,
+                r.fight_count
+            FROM (
+                SELECT 
+                    MIN(red_fighter_id, blue_fighter_id) as id_a,
+                    MAX(red_fighter_id, blue_fighter_id) as id_b,
+                    COUNT(*) as fight_count
+                FROM fights
+                GROUP BY id_a, id_b
+                HAVING COUNT(*) > 1
+            ) r
+            JOIN fighters f1 ON r.id_a = f1.id
+            JOIN fighters f2 ON r.id_b = f2.id
+            ORDER BY f1.elo_rating DESC
+        """
+        
+        self.cursor.execute(query)
+        return self.format_web_query(query)
+
+        
+    def get_rivalry_fights(self, fighter_1, fighter_2):
+        query = f"""
+        SELECT 
+            f.red_fighter_id,
+            f.blue_fighter_id,
+            f1.Name as red_fighter_name,
+            f2.Name as blue_fighter_name,
+            f.event_date,
+            f.win_method as win_method,
+            f.final_round as final_round,
+            f.event_url as event_url
+        FROM fights f
+        JOIN fighters f1 ON f.red_fighter_id = f1.id
+        JOIN fighters f2 ON f.blue_fighter_id = f2.id
+        WHERE 
+            (f.red_fighter_id = {fighter_1} AND f.blue_fighter_id = {fighter_2})
+            OR 
+            (f.red_fighter_id = {fighter_2} AND f.blue_fighter_id = {fighter_1})
+        ORDER BY f.event_date DESC
+        """
+        self.cursor.execute(query)
+        return self.format_web_query(query)
+    
+        

@@ -32,8 +32,7 @@ def register_user(user_data: UserCreate):
                 detail="Could not create user."
             )
             
-        new_user = db.get_user_by_id(new_user_id)
-        return new_user
+        return 
     
 @auth_router.post("/login")
 def login_user(login_data: UserLogin):

@@ -105,14 +105,15 @@ class CommunityManager:
             print(f"Error creating community: {e}")
             return None
 
-    def join_community(self, community_id: int, user_id: int) -> bool:
+    def join_community(self, community_id: int, user_id: int, bet: int) -> bool:
         sql = """
             INSERT INTO community_members (community_id, user_id, role)
             VALUES (?, ?, 'user')
         """
         try:
             self.cursor.execute(sql, (community_id, user_id))
-            return self.cursor.rowcount > 0  # True if a row was inserted
+            self.place_bet(community_id, user_id, bet)
+            return self.cursor.rowcount > 0  
         except sqlite3.IntegrityError:
             print("User already in community or community does not exist.")
             return False
@@ -133,18 +134,19 @@ class CommunityManager:
         """
         try:
             self.cursor.execute(sql, (bet, community_id, user_id))
-            return self.cursor.rowcount > 0  # True if a row was updated
+            return self.cursor.rowcount > 0  
         except sqlite3.IntegrityError:
             print("Invalid bet value.")
             return False
 
 
     def get_community_details(self, community_id: int) -> Optional[dict]:
+        
         sql = """
             SELECT 
                 c.name, c.fight_id,
                 u.first_name, u.last_name, 
-                cm.role, cm.bet
+                cm.role, cm.bet, cm.user_id
             FROM communities c
             JOIN community_members cm ON c.id = cm.community_id
             JOIN users u ON cm.user_id = u.id
@@ -161,7 +163,8 @@ class CommunityManager:
             details["members"].append({
                 "name": f"{row['first_name']} {row['last_name']}",
                 "role": row['role'],
-                "bet": "Red" if row['bet'] == 0 else "Blue" if row['bet'] == 1 else "None"
+                "bet": "Red" if row['bet'] == 0 else "Blue" if row['bet'] == 1 else "None",
+                "user_id": row['user_id'] if row["user_id"] else None,
             })
         return details
     
@@ -186,4 +189,51 @@ class CommunityManager:
                 "created_by_user_id": row["created_by_user_id"]
             })
         return communities
-        
+    
+    def get_all_communities(self) -> List[dict]:
+            sql = """
+                SELECT 
+                    c.id as community_id, c.name, c.fight_id, c.created_by_user_id,
+                    f.event_date,
+                    u.first_name, u.last_name,
+                    cm.user_id, cm.role, cm.bet
+                FROM communities c
+                LEFT JOIN upcoming f ON c.fight_id = f.id
+                LEFT JOIN community_members cm ON c.id = cm.community_id
+                LEFT JOIN users u ON cm.user_id = u.id
+                ORDER BY c.id
+            """
+            
+            self.cursor.execute(sql)
+            rows = self.cursor.fetchall()
+            
+            if not rows:
+                return []
+
+            communities_map = {}
+
+            for row in rows:
+                c_id = row["community_id"]
+
+                if c_id not in communities_map:
+                    communities_map[c_id] = {
+                        "id": c_id,
+                        "name": row["name"],
+                        "fight_id": row["fight_id"],
+                        "event_date": row["event_date"], # Now included
+                        "created_by_user_id": row["created_by_user_id"],
+                        "members": []
+                    }
+
+                if row["user_id"] is not None:
+                    bet_display = "Red" if row['bet'] == 0 else "Blue" if row['bet'] == 1 else "None"
+                    
+                    member_data = {
+                        "user_id": row["user_id"],
+                        "name": f"{row['first_name']} {row['last_name']}",
+                        "role": row["role"],
+                        "bet": bet_display
+                    }
+                    communities_map[c_id]["members"].append(member_data)
+
+            return list(communities_map.values())

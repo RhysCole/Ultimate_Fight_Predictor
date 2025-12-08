@@ -102,3 +102,26 @@ def get_fight_history(fighter_id):
         
     return history        
 
+@fights_router.get("/rivalry")
+def get_fight_rivalry():
+    with DatabaseManager(DB_PATH) as db:
+        rivalry = db.get_active_rivalries()
+        
+    return rivalry
+
+@fights_router.get("/RFights")
+def get_RFights(red_fighter_id, blue_fighter_id):
+    with DatabaseManager(DB_PATH) as db:
+        RFights = db.get_rivalry_fights(red_fighter_id, blue_fighter_id)
+        
+    return RFights
+
+@fights_router.get("/RDominance")
+def get_rivalry_dominance_score(red_fighter_id, blue_fighter_id, ):
+    with DatabaseManager(DB_PATH) as db:
+        red_fighter = db.get_fighter_by_id(red_fighter_id)
+        blue_fighter = db.get_fighter_by_id(blue_fighter_id)
+
+    context = Fight_Context(red_fighter, blue_fighter, event_date = "2025-12-12", winner_id = None)
+    return context.get_rivalry_dominance()
+

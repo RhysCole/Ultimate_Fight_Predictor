@@ -8,9 +8,9 @@ community_router = APIRouter(
 )
 
 @community_router.post("/join")
-def join_community(community_id: int, user_id: int):
+def join_community(community_id: int, user_id: int, bet: int):
     with CommunityManager() as db:
-        return db.join_community(community_id, user_id)
+        return db.join_community(community_id, user_id, bet)
     
 @community_router.post("/leave")
 def leave_community(community_id: int, user_id: int):
@@ -37,5 +37,10 @@ def get_details(community_id: int):
 def get_communities(fight_id: int):
     with CommunityManager() as db:
         return db.get_communities_by_fightID(fight_id)
+
+@community_router.get('/all')    
+def get_all_communities():
+    with CommunityManager() as db:
+        return db.get_all_communities()
     
 
