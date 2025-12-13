@@ -125,3 +125,9 @@ def get_rivalry_dominance_score(red_fighter_id, blue_fighter_id, ):
     context = Fight_Context(red_fighter, blue_fighter, event_date = "2025-12-12", winner_id = None)
     return context.get_rivalry_dominance()
 
+@fights_router.get("/all")
+def get_all_fights():
+    with DatabaseManager(DB_PATH) as db:
+        fights = db.get_fights()
+        
+    return fights
