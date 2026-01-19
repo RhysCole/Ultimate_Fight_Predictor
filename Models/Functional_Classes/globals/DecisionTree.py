@@ -99,7 +99,7 @@ class DecisionTree:
         try:
             hist = np.bincount(y)
         except Exception as e:
-            print(f"⚠️ np.bincount failed on y={y}, dtype={y.dtype}")
+            print(f"np.bincount failed on y={y}, dtype={y.dtype}")
             print("Exception: GINI", e)
             raise  
         
@@ -139,7 +139,7 @@ class DecisionTree:
             if node.value is None:
                 none_count += 1
                 
-            print(f"{indent}Leaf: value={node.value}")
+            print(f"{indent}LAeaf: value={node.value}")
             
         return(none_count)
 

@@ -9,14 +9,13 @@ from config.config import DB_PATH
 from Database.database_manager import DatabaseManager
 from Fight_Predictor.Fight_Context import Fight_Context
 
-
-
 def create_main_features():
+    #loading the fighters and past fights 
     with DatabaseManager(DB_PATH) as db:
         fights = pd.DataFrame(db.get_fights())
         fighters = db.get_fighters()
         
-
+    # creates a map of fighters with their id as a ket for faster lookups 
     fighters_map = {f.id: f for f in fighters}
 
     feature_df = []

@@ -6,35 +6,43 @@ from typing import Optional, List
 from Models.DB_Classes.Fighters import Fighter
 from Models.DB_Classes.Fight import Fight
  
+# Initialize the class with the path to your SQLite database file
 class DatabaseManager:
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.conn = None
         self.cursor = None
 
+    # Open the database connection automatically when using the 'with' statement
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_path)
+        # Set row_factory to Row so we can access columns by name like a dictionary
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         return self
 
+    # Save changes and close the connection when the 'with' block ends
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.conn:
             self.conn.commit()
             self.conn.close()
             
+    # Run a SQL query and turn the raw rows into a list of clean dictionaries
     def format_web_query(self, query):
         self.cursor.execute(query)
         rows = self.cursor.fetchall()
         
+        # Grab the header names from the database table (e.g., 'Name', 'Record')
         despription = self.cursor.description
         column_names = [desc[0] for desc in despription]
         
         full_list = []
+        # Loop through each row and pair the column names with the actual data
         for row in rows:
             dictionary = dict(zip(column_names, row))
             full_list.append(dictionary)
                     
+        # Return the data in a format ready for a web API or front-end
         return full_list
 
     def clear_tables(self, tables: list[str]):
@@ -483,12 +491,18 @@ class DatabaseManager:
         self.cursor.execute(query)
         
     def get_past_fights(self, fighter_id):            
-            query = f"""
-                SELECT * FROM fights
-                WHERE red_fighter_id = {fighter_id} OR blue_fighter_id = {fighter_id}
-                ORDER BY event_date ASC
-            """
-            return self.format_web_query(query)
+                query = f"""
+                    SELECT 
+                        f.*, 
+                        r.Name AS red_fighter_name, 
+                        b.Name AS blue_fighter_name
+                    FROM fights f
+                    LEFT JOIN fighters r ON f.red_fighter_id = r.id
+                    LEFT JOIN fighters b ON f.blue_fighter_id = b.id
+                    WHERE f.red_fighter_id = {fighter_id} OR f.blue_fighter_id = {fighter_id}
+                    ORDER BY f.event_date ASC
+                """
+                return self.format_web_query(query)
         
     def get_fighter_rank(self, fighter_id: int) -> int | None:
         query = """
