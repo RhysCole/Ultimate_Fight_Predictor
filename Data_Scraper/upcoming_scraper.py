@@ -86,6 +86,3 @@ def scrape_all_fights():
 
     return all_historical_fights
     
-# Main entry point to run the script automatically when executed
-if __name__ == "__main__":
-    scrape_all_fights()

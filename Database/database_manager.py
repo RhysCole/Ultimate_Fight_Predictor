@@ -347,8 +347,18 @@ class DatabaseManager:
         }
 
         return styles_map
-
-
+    
+    
+    def get_raw_fight_by_id(self, fight_id: int):
+        query = """
+            SELECT * FROM fights WHERE fight_id = ?
+        """
+        
+        self.cursor.execute(query, (fight_id,))
+        
+        result = self.cursor.fetchone()
+        
+        return dict(result) if result else None
 
 
 
@@ -396,11 +406,19 @@ class DatabaseManager:
         """
         return self.format_web_query(query)
     
-    def get_recent_fights(self, count):
-        query = f"""
-            SELECT * FROM fights ORDER BY event_date DESC LIMIT {count}
-        """
-        return self.format_web_query(query)
+    def get_recent_fights(self, count: int):
+            query = f"""
+                SELECT 
+                    f.*, 
+                    r.Name as red_fighter_name, 
+                    b.Name as blue_fighter_name
+                FROM fights f
+                LEFT JOIN fighters r ON f.red_fighter_id = r.id
+                LEFT JOIN fighters b ON f.blue_fighter_id = b.id
+                ORDER BY f.event_date DESC 
+                LIMIT {count}
+            """
+            return self.format_web_query(query)
 
     def get_all_fighters(self):
         query = f"""

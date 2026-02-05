@@ -1,3 +1,10 @@
+import sys
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..'))
+sys.path.append(project_root)
+
 # Import the custom Fight model and standard libraries for dates, web scraping, and requests
 from Models.DB_Classes.Fight import Fight
 import datetime
@@ -118,6 +125,7 @@ def scrape_event_page(url: str) -> list[Fight]:
     for row in soup.select('tr[data-link]'):
         fight_object = parse_fight_row(row, url, fight_date_sql, is_completed)
         if fight_object:
+            print(fight_object)
             all_fights.append(fight_object)
     return all_fights
 
@@ -141,3 +149,8 @@ def scrape_all_fights() -> list[Fight]:
         
     # Return the  list containing every single fight scraped from the site
     return all_historical_fights
+
+
+if __name__ == "__main__":
+    all_data = scrape_all_fights()
+    print(f"Scraped {len(all_data)} fights.")

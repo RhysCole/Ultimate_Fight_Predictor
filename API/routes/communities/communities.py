@@ -10,7 +10,15 @@ community_router = APIRouter(
 @community_router.post("/join")
 def join_community(community_id: int, user_id: int, bet: int):
     with CommunityManager() as db:
-        return db.join_community(community_id, user_id, bet)
+        success = db.join_community(community_id, user_id, bet)
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Join Failed: User already in group, or Community/User ID does not exist."
+        )
+        
+    return {"message": "Successfully joined community!", "bet": bet}
     
 @community_router.post("/leave")
 def leave_community(community_id: int, user_id: int):

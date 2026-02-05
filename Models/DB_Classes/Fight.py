@@ -3,11 +3,10 @@ from typing import Optional
 class Fight:
 
     def __init__(self, fight_data: dict):
-
-        self.fight_id: Optional[int]
-        self.red_fighter_id: Optional[int]
-        self.blue_fighter_id: Optional[int]
-        self.winner_id: Optional[int]
+        self.fight_id = fight_data.get("fight_id")
+        self.red_fighter_id = fight_data.get("red_fighter_id")
+        self.blue_fighter_id = fight_data.get("blue_fighter_id")
+        self.winner_id = fight_data.get("winner_id")
         
         self.red_knockdowns: int = fight_data.get("red_knockdowns", 0)
         self.blue_knockdowns: int = fight_data.get("blue_knockdowns", 0)
@@ -53,4 +52,4 @@ class Fight:
         )
 
     def __repr__(self) -> str:
-        return f"<Fight: {self.red_fighter_id} vs. {self.blue_fighter_id}>"
+        return f"<Fight: {self.final_time_seconds} seconds test to show successful fetch>"

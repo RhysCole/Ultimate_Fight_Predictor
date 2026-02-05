@@ -2,12 +2,14 @@ from fastapi import APIRouter, HTTPException, status
 from typing import List
 import joblib
 import json
+import pandas as pd
 
 from Fight_Predictor.Fight_Context import Fight_Context
 from config.config import DB_PATH, PREDICTOR_MODEL_PATH
 from Database.database_manager import DatabaseManager
 from API.routes.fights.schema import UpcomingFight, PastFight
 from Models.DB_Classes.Fighters import Fighter
+from utils.dominance_prediction import dominance_prediction
 
 
 fights_router = APIRouter(
@@ -30,7 +32,7 @@ def get_upcoming_fights_route():
             detail=f"An error occurred while fetching fights: {e}"
         )
         
-@fights_router.get("/recent", response_model=List[PastFight])
+@fights_router.get("/recent")
 def recent_fights(count):
     with DatabaseManager(DB_PATH) as db:
         recent_fights = db.get_recent_fights(count)
@@ -131,3 +133,17 @@ def get_all_fights():
         fights = db.get_fights()
         
     return fights
+
+
+@fights_router.get("/dominance")
+def get_fight_dominance(fight_id):
+    with DatabaseManager(DB_PATH) as db:
+        fight = db.get_raw_fight_by_id(fight_id)
+        
+    single_fight_df = pd.DataFrame([fight])
+    prediction_df = dominance_prediction(single_fight_df)
+    
+    score = prediction_df.iloc[0, 0]
+    return score  
+        
+    

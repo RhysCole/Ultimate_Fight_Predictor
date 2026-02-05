@@ -93,12 +93,6 @@ class CommunityManager:
             """
             self.cursor.execute(sql_create_community, (name, fight_id, creator_user_id))
             new_community_id = self.cursor.lastrowid
-
-            sql_add_admin = """
-                INSERT INTO community_members (community_id, user_id, role)
-                VALUES (?, ?, 'admin')
-            """
-            self.cursor.execute(sql_add_admin, (new_community_id, creator_user_id))
             
             return new_community_id
         except sqlite3.IntegrityError as e:
@@ -106,17 +100,22 @@ class CommunityManager:
             return None
 
     def join_community(self, community_id: int, user_id: int, bet: int) -> bool:
-        sql = """
-            INSERT INTO community_members (community_id, user_id, role)
-            VALUES (?, ?, 'user')
-        """
-        try:
-            self.cursor.execute(sql, (community_id, user_id))
-            self.place_bet(community_id, user_id, bet)
-            return self.cursor.rowcount > 0  
-        except sqlite3.IntegrityError:
-            print("User already in community or community does not exist.")
-            return False
+            sql = """
+                INSERT INTO community_members (community_id, user_id, role, bet)
+                VALUES (?, ?, 'user', ?)
+            """
+            try:
+                print(f"DEBUG: Inserting -> Community: {community_id}, User: {user_id}, Bet: {bet}")
+                self.cursor.execute(sql, (community_id, user_id, bet))
+                self.conn.commit()
+                print("DEBUG: Insert successful!")
+                return True
+            except sqlite3.IntegrityError as e:
+                print(f"CRITICAL DB ERROR: {e}")
+                return False
+            except Exception as e:
+                print(f"UNEXPECTED ERROR: {e}")
+                return False
 
     def leave_community(self, community_id: int, user_id: int) -> bool:
         sql = """
@@ -124,21 +123,7 @@ class CommunityManager:
             WHERE community_id = ? AND user_id = ?
         """
         self.cursor.execute(sql, (community_id, user_id))
-        return self.cursor.rowcount > 0  # True if a row was deleted
-
-    def place_bet(self, community_id: int, user_id: int, bet: int) -> bool:
-        sql = """
-            UPDATE community_members
-            SET bet = ?
-            WHERE community_id = ? AND user_id = ?
-        """
-        try:
-            self.cursor.execute(sql, (bet, community_id, user_id))
-            return self.cursor.rowcount > 0  
-        except sqlite3.IntegrityError:
-            print("Invalid bet value.")
-            return False
-
+        return self.cursor.rowcount > 0  
 
     def get_community_details(self, community_id: int) -> Optional[dict]:
         
