@@ -7,7 +7,7 @@ import datetime
 
 
 def safe_to_datetime(date_str, format):
-
+    # convert strings to datetime
     if not date_str or date_str == '--':
         return pd.NaT
 
@@ -17,12 +17,13 @@ def safe_to_datetime(date_str, format):
         return pd.NaT
 
 def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.DataFrame):
-
+    # Define weights for ranking penalties and bonuses
     WEIGHT_ACTIVITY = 35
     WEIGHT_SOS = 0.5
     WEIGHT_AGE = 0.1
     Z_SCORE = 2.0
 
+    # Create lookups for name and date of birth for speed
     fighter_name_map = {f.id: f.name for f in all_fighters}
     fighter_dob_map = {f.id: safe_to_datetime(f.dob, '%b %d, %Y') for f in all_fighters}
 
@@ -33,8 +34,10 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
     for fighter_id, player in glicko_players.items():
         if fighter_id not in fighter_name_map: continue
 
+        # Calculate conservative rating estimate, which is Rating - 2 * RD
         skill_component = player.rating - (Z_SCORE * player.rating_deviation)
 
+        # Get all fights involving this fighter
         fighter_fights = all_fights_df[
             (all_fights_df['red_fighter_id'] == fighter_id) |
             (all_fights_df['blue_fighter_id'] == fighter_id)
@@ -42,10 +45,12 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
 
         if fighter_fights.empty: continue
 
+        # Calculate penalty based on inactivity using a logarithmic scale
         last_fight_date = pd.to_datetime(fighter_fights['event_date']).max().date()
         days_since_last_fight = (today - last_fight_date).days
         activity_penalty = -np.log((days_since_last_fight / 180) + 1) * WEIGHT_ACTIVITY
 
+        # Calculate Strength from last 5 opponents
         recent_fights = fighter_fights.tail(5)
         opponent_elos = []
         for _, fight in recent_fights.iterrows():
@@ -59,9 +64,11 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
         avg_opponent_rating = np.mean(opponent_elos)
         sos_bonus = (avg_opponent_rating - 1500) * WEIGHT_SOS
 
+        # Calculate age penalty if >30 or <24
         age = (pd.to_datetime(today) - fighter_dob_map.get(fighter_id, pd.to_datetime(today))).days / 365.25
         age_penalty = -((age - 30) ** 2) * WEIGHT_AGE if age > 30 or age < 24 else 0
 
+        # Sum components to get final Quality Score
         advanced_quality_score = skill_component + activity_penalty + sos_bonus + age_penalty
         quality_scores[fighter_id] = advanced_quality_score
 
@@ -75,8 +82,10 @@ def ranking_model(glicko_players: dict, all_fighters: list, all_fights_df: pd.Da
 
     if not ranking_data: return
 
+    # Create DataFrame and sort by the final score
     rankings_df = pd.DataFrame(ranking_data)
     final_rankings = rankings_df.sort_values(by='Quality Score', ascending=False)
 
+    # Insert rank position numbers
     final_rankings.insert(0, '#', range(1, 1 + len(final_rankings)))
     return final_rankings, quality_scores

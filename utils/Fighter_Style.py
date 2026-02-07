@@ -16,10 +16,12 @@ from Database.database_manager import DatabaseManager
 
 def define_style(fighter_id):
     with DatabaseManager(DB_PATH) as db:
+        # Fetch fighter history and details from database
         fighter_history = db.get_fighter_history([fighter_id], datetime.now())
         fighter = db.get_fighter_by_id(fighter_id)
 
     if fighter_history.empty or len(fighter_history) < 2:
+        # Return default Newcomer  if there is less than 2 fights 
         return {
             "fighter_id": fighter.id,
             "primary_style": 'Newcomer',
@@ -38,6 +40,7 @@ def define_style(fighter_id):
     total_fight_time_seconds = 0
 
     for _, fight in fighter_history.iterrows():
+        # Aggregate stats from all historical fights
         is_red = fight['red_fighter_id'] == fighter_id
 
         total_takedowns_landed += fight['red_takedowns'] if is_red else fight['blue_takedowns']
@@ -49,11 +52,14 @@ def define_style(fighter_id):
 
         if fight['winner_id'] == fighter_id:
             total_wins += 1
+            # Check for finishes to determine aggression
             if 'KO' in fight['win_method'] or 'SUB' in fight['win_method']:
                 total_finishes += 1
 
     avg_takedowns = total_takedowns_landed / num_fights
     avg_subs = total_sub_attempts / num_fights
+    
+    # Weighted score to determine grappling score
     grappling_tendency = (avg_takedowns * 2.0) + (avg_subs * 1.0)
 
     if grappling_tendency >= 3.5:
@@ -67,6 +73,7 @@ def define_style(fighter_id):
 
 
     total_minutes = total_fight_time_seconds / 60
+    # Calculate strikes per minute to get a fighters pacing
     slpm = total_sig_strikes_landed / total_minutes if total_minutes > 0 else 0
 
     finish_rate = total_finishes / total_wins if total_wins > 0 else 0
@@ -78,6 +85,7 @@ def define_style(fighter_id):
     else:
         pacing = "Counter"
 
+    # get intent based on finish rate and knockdowns
     if finish_rate > 0.7:
         intent = "Finisher"
     elif total_knockdowns_scored / num_fights > 0.5:
@@ -91,10 +99,12 @@ def define_style(fighter_id):
         secondary_style = f"{pacing} {intent}"
 
     try:
+        # Normalized height and reach for Ape Index
         height_val = float(fighter.height.replace('"', '')) * 2 if fighter.height and fighter.height != '--' else 0
         reach_val = float(fighter.reach.replace('"', '')) * 2 if fighter.reach and fighter.reach != '--' else 0
         ape_index = reach_val - height_val if height_val and reach_val else 0
 
+        # Define body frame based on Ape Index so Reach - Height
         if ape_index > 8:
             frame = "Long-Limbed"
         elif ape_index < -5:
@@ -118,9 +128,9 @@ def get_all_fighter_styles(fighter_ids: pd.DataFrame) -> List[dict]:
     figher_ids_list = fighter_ids['id'].tolist()
 
     style_results = []
+    # Batch process all fighters in the provided DataFrame
     for fighter_id in figher_ids_list:
         style_object = define_style(fighter_id)
         style_results.append(style_object)
 
     return style_results
-

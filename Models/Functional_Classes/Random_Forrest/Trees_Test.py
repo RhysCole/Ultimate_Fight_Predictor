@@ -11,9 +11,7 @@ class TestTreeModels(unittest.TestCase):
         self.X_xor = np.array([[0,0], [1,1], [0,1], [1,0]])
         self.y_xor = np.array([0, 0, 1, 1])
 
-    # ---------------------------------------------------------
     # DECISION TREE TESTS
-    # ---------------------------------------------------------
 
     def test_dt_perfect_split_normal(self):
         X = np.array([[0], [1], [10], [11]])
@@ -48,9 +46,7 @@ class TestTreeModels(unittest.TestCase):
             
         self.assertEqual(pred[0], 0, "Prediction for single sample was wrong.")
 
-    # ---------------------------------------------------------
     # RANDOM FOREST TESTS
-    # ---------------------------------------------------------
 
     def test_rf_integration_normal(self):
         rf = My_Random_Forrest(n_estimators=5, max_depth=3)

@@ -3,13 +3,16 @@ import pandas as pd
 
 class MyOneHotEncoder():
     def __init__(self):
+        # Initialize storage for category mappings and feature names
         self.category_map_ = None
         self.inverse_category_map_ = None
         self.feature_names_ = None
 
     def fit(self, X: pd.Series):
+        # Sort unique categories to ensure consistent column ordering
         unique_categories = sorted(X.unique())
 
+        # Create forward and reverse mappings for categories
         self.category_map_ = {category: i for i, category in enumerate(unique_categories)}
         self.inverse_category_map_ = {i: category for i, category in enumerate(unique_categories)}
         self.feature_names_ = [f"{X.name}_{category}" for category in unique_categories]
@@ -18,25 +21,29 @@ class MyOneHotEncoder():
 
 
     def get_feature_names_out(self, prefix: str) -> list:
+        # Generate column names using a custom prefix
         categories = sorted(self.category_map_, key=self.category_map_.get)
         return [f"{prefix}_{category}" for category in categories]
 
 
     def transform(self, X: pd.Series, prefix = None):
-
+        # Ensure fit has been called before transforming
         if self.category_map_ is None:
             raise RuntimeError("Encoder has not been fitted yet. Call .fit() first.")
 
         n_samples = len(X)
         n_categories = len(self.category_map_)
+        # Initialize an all-zero matrix for the encoded data
         transformed_features = np.zeros((n_samples, n_categories), dtype=int)
 
         for i, category in enumerate(X):
+            # Map each category to its index and set that bit to 1
             category_index = self.category_map_.get(category)
             
             if category_index is not None:
                 transformed_features[i, category_index] = 1
 
+        # Determine the final column names based on prefix argument
         if prefix is None:
             col_name = self.feature_names_
         elif prefix is not None:
@@ -46,7 +53,9 @@ class MyOneHotEncoder():
         return pd.DataFrame(transformed_features, columns=col_name, index=X.index)
     
     def fit_transform(self, X: pd.Series):
+        # Fit to data and transform it in one step
         return self.fit(X).transform(X)
     
     def inverse_transform(self, X: pd.DataFrame):
+        # Map the max value column back to the original category name
         return X.idxmax(axis=1).map(self.inverse_category_map_)

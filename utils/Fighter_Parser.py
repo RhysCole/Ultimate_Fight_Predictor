@@ -6,15 +6,18 @@ import datetime
 from Models.DB_Classes.Fighters import Fighter
 
 def parse_record(record_str: str) -> tuple[int, int , int]:
+    # Validate input string exists and starts correctly
     if not record_str or not record_str.startswith('Record'):
         print("there was no record string")
         return 0, 0, 0
 
     try:
+        # Strip text and split Wins-Losses-Draws into integers
         parts = record_str.replace('Record:', "").strip().split('-')
         wins = int(parts[0])
         losses = int(parts[1])
         
+        # Handle cases where draws have extra text
         draws = parts[2].split(" ")
         
         drws = int(draws[0])
@@ -25,15 +28,18 @@ def parse_record(record_str: str) -> tuple[int, int , int]:
 
 def parse_height_to_cm(height_str: str) -> float:
     try:
+        # Convert feet format to centimeters
         feet, inches = height_str.replace('"', '').split("'")
         return (int(feet) * 30.48) + (int(inches) * 2.54)
     except:
         return 0
 
 def parse_reach_to_cm(reach_str: str) -> float:
+    # Handle missing data represented by dashes
     if not reach_str or reach_str == '--':
         return None
     try:
+        # Convert inches to centimeters
         return float(reach_str.replace('"', '')) * 2.54
     except ValueError:
         return None
@@ -42,35 +48,41 @@ def calc_age(dob: str, event_date: datetime.date) -> float:
     if not dob or dob == '--':
         return None
     try:
+        # Calculate age in years at the time of the event
         dob = pd.to_datetime(dob).date()
         return (event_date - dob).days / 365.25
     except (ValueError, TypeError):
         return None
 
 def calc_gausian_age_prime(age):
-    
+    # Handle missing age with a neutral score
     if age is None:
         return 0.5
 
+    # Define peak athletic age and fall-off rate
     prime_age = 30.0
     standard_deviation = 4
 
+    # Calculate score using Gaussian distribution which is a bell curve peaking at 30 for a fighters prime 
     score = np.exp(-((age - prime_age)**2) / (2 * standard_deviation**2))
     return score
 
 def calc_record_stats(red_fighter: Fighter, blue_fighter: Fighter):
+    # Parse records for both fighters
     wins_red, losses_red, draws_red = parse_record(red_fighter.record)
     wins_blue, losses_blue, draws_blue = parse_record(blue_fighter.record)
     
+    # Calculate total fights as the experiance of a fighter 
     red_total = wins_red + losses_red + draws_red
     blue_total = wins_blue + losses_blue + draws_blue
     experiance_diff = red_total - blue_total
     
-    
+    # Calculate win percentages and the differential
     red_win_percent = wins_red / red_total if red_total > 0 else 0
     blue_win_percent = wins_blue / blue_total if blue_total > 0 else 0
     win_prop_diff = (red_win_percent - blue_win_percent)
     
+    # Calculate loss percentages and the differential
     red_loss_percent = losses_red / red_total if red_total > 0 else 0
     blue_loss_percent = losses_blue / blue_total if blue_total > 0 else 0
     loss_prop_diff = (red_loss_percent - blue_loss_percent)
@@ -78,11 +90,12 @@ def calc_record_stats(red_fighter: Fighter, blue_fighter: Fighter):
     return experiance_diff, win_prop_diff, loss_prop_diff
 
 
-
 def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_date, readable = False) -> pd.DataFrame:
 
+    # Set fight date to today 
     fight_date = pd.to_datetime(event_date).date() if event_date else datetime.date.today()
 
+    # Calculate physical stats and differences
     height_red_cm = parse_height_to_cm(red_fighter.height)
     height_blue_cm = parse_height_to_cm(blue_fighter.height)
     height_diff = height_red_cm - height_blue_cm if height_red_cm and height_blue_cm else 0
@@ -91,6 +104,7 @@ def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_dat
     reach_blue_cm = parse_reach_to_cm(blue_fighter.reach)
     reach_diff = reach_red_cm - reach_blue_cm if reach_red_cm and reach_blue_cm else 0
 
+    # Calculate age and physical prime scores
     age_red = calc_age(red_fighter.dob, fight_date)
     age_blue = calc_age(blue_fighter.dob, fight_date)
     age_diff = age_red - age_blue if age_red and age_blue else 0
@@ -99,8 +113,10 @@ def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_dat
     prime_score_blue = calc_gausian_age_prime(age_blue)
     prime_score_diff = prime_score_red - prime_score_blue
 
+    # Get record based stats
     experiance_diff, win_prop_diff, loss_prop_diff = calc_record_stats(red_fighter, blue_fighter)
 
+    # Return simplified features for model or detailed stats for human reading
     if readable == False: 
         feature_dict = {
         "experiance_diff": experiance_diff,
@@ -128,5 +144,4 @@ def create_fight_features(red_fighter: Fighter, blue_fighter: Fighter, event_dat
             "prime_score_diff": prime_score_diff
         }
 
-    return pd.DataFrame(feature_dict, index=[0]) 
-
+    return pd.DataFrame(feature_dict, index=[0])

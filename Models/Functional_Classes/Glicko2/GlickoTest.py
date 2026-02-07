@@ -21,9 +21,8 @@ class TestGlickoCalculator(unittest.TestCase):
         self.assertTrue(0 < result < 0.1, "g")
 
     def test_expected_outcome_logic(self):
-        """Test the probability prediction logic."""
-        # 1. Equal ratings = 0.5 probability
-        prob = self.calculator.expected_outcome(0, 0, 1) # mu=0 means rating=1500
+
+        prob = self.calculator.expected_outcome(0, 0, 1) 
         self.assertAlmostEqual(prob, 0.5, places=5)
 
 
@@ -33,8 +32,7 @@ class TestGlickoCalculator(unittest.TestCase):
         self.calculator.rate_1vs1(self.fighter, self.opponent_strong, 1.0)
         
         print(f"Upset Win: {initial_rating} -> {self.fighter.rating}")
-        self.assertGreater(self.fighter.rating, initial_rating + 100, 
-                           "Rating should jump")
+        self.assertGreater(self.fighter.rating, initial_rating + 100, "Rating should jump")
 
     def test_perfect_loss_against_weak_opponent(self):
         initial_rating = self.fighter.rating
@@ -42,8 +40,7 @@ class TestGlickoCalculator(unittest.TestCase):
         self.calculator.rate_1vs1(self.fighter, self.opponent_weak, 0.0)
         
         print(f"Upset Loss: {initial_rating} -> {self.fighter.rating}")
-        self.assertLess(self.fighter.rating, initial_rating - 100,
-                        "Rating should crash after losing to a newbie")
+        self.assertLess(self.fighter.rating, initial_rating - 100,"Rating should crash after losing")
 
 
     def test_rd_decrease_logic(self):
