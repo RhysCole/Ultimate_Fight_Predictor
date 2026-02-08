@@ -30,5 +30,5 @@ app.include_router(community_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Hello bati boy, Now use a proper path"}
+    return {"message": "Hello boy, Now use a proper path"}
 
